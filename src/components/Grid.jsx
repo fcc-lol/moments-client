@@ -1,17 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { MapContainer, TileLayer, Circle, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import {
-  LocationCard,
-  LocationPlaceName,
-  LocationAddress,
-  DateWeatherWrapper,
-  DateCard,
-  WeatherCard,
-  PreviewImage
-} from "./Card";
 import { formatDate } from "../utils/formatDate";
+import LocationInfoCard from "./cards/Address";
+import DateTimeCard from "./cards/Date";
+import WeatherInfoCard from "./cards/Weather";
+import MapCard from "./cards/Map";
 
 const ContentWrapper = styled.div`
   display: flex;
@@ -40,10 +33,22 @@ const LeftColumn = styled.div`
   }
 `;
 
-const LocationSection = styled.div`
+const DateWeatherWrapper = styled.div`
   display: flex;
-  flex-direction: column;
   gap: 2rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const PreviewImage = styled.img`
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  user-select: none;
 `;
 
 const DateMapSection = styled.div`
@@ -100,103 +105,10 @@ const CopyLinkButton = styled.button`
   }
 `;
 
-const MapWrapper = styled.div`
-  flex: 1;
-  min-height: 0;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  position: relative;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    height: 0;
-    padding-bottom: 100%;
-    position: relative;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: ${(props) => props.$overlayColor || "transparent"};
-    mix-blend-mode: overlay;
-    pointer-events: none;
-    border-radius: 0.75rem;
-    z-index: 1000;
-  }
-
-  .leaflet-container {
-    width: 100%;
-    height: 100%;
-    border-radius: 0.75rem;
-    background: black;
-
-    @media (max-width: 768px) {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    .leaflet-tile {
-      filter: brightness(5) contrast(10) invert(1);
-    }
-  }
-`;
-
-const MapOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: ${(props) => props.$overlayColor || "rgba(0, 0, 0, 0.2)"};
-  pointer-events: none;
-  border-radius: 0.75rem;
-  z-index: 1000;
-  opacity: 0.1;
-  mix-blend-mode: screen;
-`;
-
-const MapCoords = styled.div`
-  position: absolute;
-  bottom: 1.75rem;
-  left: 1.75rem;
-  right: 1.75rem;
-  display: flex;
-  justify-content: space-between;
-  font-family: "DM Mono", monospace;
-  color: ${(props) => props.$textColor || "#fff"};
-  opacity: 0.5;
-  font-size: 1.125rem;
-  height: 1.125rem;
-  min-height: 1.125rem;
-  z-index: 1001;
-  pointer-events: none;
-`;
-
 const NoExifMessage = styled.p`
   color: rgba(255, 255, 255, 0.5);
   font-family: "DM Mono", monospace;
 `;
-
-// Component to fix map size on mount
-const MapResizer = ({ center }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    // Invalidate size immediately to avoid jumps
-    map.invalidateSize({ animate: false });
-    // Always enforce the center position with offset
-    if (center) {
-      map.setView(center, map.getZoom(), { animate: false });
-    }
-  }, [map, center]);
-
-  return null;
-};
 
 function MomentLayout({
   exifData,
@@ -217,11 +129,6 @@ function MomentLayout({
     ? formatDate(exifData.DateTimeOriginal)
     : null;
   const hasGPS = exifData?.latitude && exifData?.longitude;
-
-  // Offset the map center slightly to position the marker higher in the viewport
-  const mapCenter = hasGPS
-    ? [exifData.latitude - 0.03, exifData.longitude]
-    : null;
 
   const handleCopyLink = async () => {
     if (!savedMomentId) return;
@@ -246,90 +153,34 @@ function MomentLayout({
   return (
     <ContentWrapper $isVisible={isVisible}>
       <LeftColumn>
-        <LocationSection>
-          {locationData && (
-            <LocationCard $bgColor={dominantColor} $textColor={textColor}>
-              <LocationPlaceName>
-                {locationData.line1 || "Location"}
-              </LocationPlaceName>
-              {locationData.line2 && (
-                <LocationAddress>{locationData.line2}</LocationAddress>
-              )}
-              {locationData.line3 && (
-                <LocationAddress>{locationData.line3}</LocationAddress>
-              )}
-              {locationData.line4 && (
-                <LocationAddress>{locationData.line4}</LocationAddress>
-              )}
-            </LocationCard>
-          )}
-
-          {hasGPS && !locationData && (
-            <LocationCard $bgColor={dominantColor} $textColor={textColor}>
-              <LocationPlaceName>Location</LocationPlaceName>
-              <LocationAddress>
-                {exifData.latitude.toFixed(6)}, {exifData.longitude.toFixed(6)}
-              </LocationAddress>
-            </LocationCard>
-          )}
-        </LocationSection>
+        <LocationInfoCard
+          locationData={locationData}
+          exifData={exifData}
+          dominantColor={dominantColor}
+          textColor={textColor}
+        />
 
         <DateMapSection>
           {(dateInfo || weatherData) && (
             <DateWeatherWrapper>
-              {dateInfo && (
-                <DateCard $bgColor={dominantColor} $textColor={textColor}>
-                  <span>{dateInfo.date}</span>
-                  <span>{dateInfo.time}</span>
-                </DateCard>
-              )}
-
-              {weatherData && (
-                <WeatherCard $bgColor={dominantColor} $textColor={textColor}>
-                  <div>{weatherData.description}</div>
-                  <div>{weatherData.temperature}°F</div>
-                </WeatherCard>
-              )}
+              <DateTimeCard
+                dateInfo={dateInfo}
+                dominantColor={dominantColor}
+                textColor={textColor}
+              />
+              <WeatherInfoCard
+                weatherData={weatherData}
+                dominantColor={dominantColor}
+                textColor={textColor}
+              />
             </DateWeatherWrapper>
           )}
 
-          {hasGPS && (
-            <MapWrapper $overlayColor={dominantColor}>
-              <MapContainer
-                key={`${exifData.latitude}-${exifData.longitude}`}
-                center={mapCenter}
-                zoom={10}
-                zoomControl={false}
-                scrollWheelZoom={false}
-                dragging={false}
-                doubleClickZoom={false}
-                attributionControl={false}
-                style={{ height: "100%", width: "100%" }}
-              >
-                <MapResizer center={mapCenter} />
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-                  opacity={0.1}
-                />
-                <Circle
-                  center={[exifData.latitude, exifData.longitude]}
-                  radius={800}
-                  pathOptions={{
-                    color: dominantColor || "white",
-                    fillColor: dominantColor || "white",
-                    fillOpacity: 1,
-                    weight: 0,
-                    opacity: 1
-                  }}
-                />
-              </MapContainer>
-              <MapOverlay $overlayColor={dominantColor} />
-              <MapCoords $textColor={textColor}>
-                <span>{exifData.latitude.toFixed(6)}</span>
-                <span>{exifData.longitude.toFixed(6)}</span>
-              </MapCoords>
-            </MapWrapper>
-          )}
+          <MapCard
+            exifData={exifData}
+            dominantColor={dominantColor}
+            textColor={textColor}
+          />
 
           {!dateInfo && !hasGPS && (
             <NoExifMessage>No EXIF data found</NoExifMessage>
