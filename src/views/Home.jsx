@@ -593,19 +593,14 @@ function HomeView() {
           setLocationData(data.locationData);
         }
 
-        // Wait for React to flush state updates before showing content
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            // Stop loading states
-            setIsLoading(false);
-            setIsWaitingForServer(false);
+        // Stop loading states
+        setIsLoading(false);
+        setIsWaitingForServer(false);
 
-            // Wait for "Processing" fade out animation, then fade in content
-            setTimeout(() => {
-              setIsContentVisible(true);
-            }, 300);
-          });
-        });
+        // Wait extra time for all state updates to fully propagate before showing content
+        setTimeout(() => {
+          setIsContentVisible(true);
+        }, 400);
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
@@ -851,9 +846,9 @@ function HomeView() {
 
       {imagePreview && (
         <MomentLayout
-          key={processingIdRef.current}
+          key={`moment-${processingIdRef.current}`}
           exifData={exifData}
-          locationData={locationData}
+          locationData={isContentVisible ? locationData : null}
           weatherData={weatherData}
           dominantColor={dominantColor}
           textColor={textColor}

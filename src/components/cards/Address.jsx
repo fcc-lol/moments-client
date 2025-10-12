@@ -31,21 +31,17 @@ const AddressLine = styled.div`
 function AddressCard({ locationData, exifData, dominantColor, textColor }) {
   const hasGPS = exifData?.latitude && exifData?.longitude;
 
-  if (!locationData && !hasGPS) {
+  // Only render if we have actual location data from the server
+  if (!locationData) {
     return null;
   }
 
   return (
     <StyledCard $bgColor={dominantColor} $textColor={textColor}>
-      <AddressPlaceName>{locationData?.line1 || "Location"}</AddressPlaceName>
-      {locationData?.line2 && <AddressLine>{locationData.line2}</AddressLine>}
-      {locationData?.line3 && <AddressLine>{locationData.line3}</AddressLine>}
-      {locationData?.line4 && <AddressLine>{locationData.line4}</AddressLine>}
-      {!locationData && hasGPS && (
-        <AddressLine>
-          {exifData.latitude.toFixed(6)}, {exifData.longitude.toFixed(6)}
-        </AddressLine>
-      )}
+      <AddressPlaceName>{locationData.line1}</AddressPlaceName>
+      {locationData.line2 && <AddressLine>{locationData.line2}</AddressLine>}
+      {locationData.line3 && <AddressLine>{locationData.line3}</AddressLine>}
+      {locationData.line4 && <AddressLine>{locationData.line4}</AddressLine>}
     </StyledCard>
   );
 }
