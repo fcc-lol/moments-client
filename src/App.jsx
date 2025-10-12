@@ -219,16 +219,12 @@ const MapResizer = ({ center }) => {
   const map = useMap();
 
   useEffect(() => {
-    // Small delay to ensure container has rendered
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-      // Always enforce the center position with offset
-      if (center) {
-        map.setView(center, map.getZoom(), { animate: false });
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Invalidate size immediately to avoid jumps
+    map.invalidateSize({ animate: false });
+    // Always enforce the center position with offset
+    if (center) {
+      map.setView(center, map.getZoom(), { animate: false });
+    }
   }, [map, center]);
 
   return null;
