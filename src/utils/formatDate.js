@@ -18,12 +18,12 @@ export const formatDate = (dateString) => {
       "Dec"
     ];
 
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
+    const month = months[date.getUTCMonth()];
+    const day = date.getUTCDate();
+    const year = date.getUTCFullYear();
 
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, "0");
+    let hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
     const ampm = hours >= 12 ? "PM" : "AM";
     hours = hours % 12;
     hours = hours ? hours : 12;
