@@ -72,11 +72,9 @@ const MapDot = styled.div`
   height: 1rem;
   border-radius: 50%;
   margin-top: -1.75rem;
-  background: ${(props) => props.$textColor || "white"};
+  background: ${(props) => props.$color || "white"};
   z-index: 1001;
   pointer-events: none;
-  opacity: 0.5;
-  mix-blend-mode: hard-light;
 `;
 
 const MapCoords = styled.div`
