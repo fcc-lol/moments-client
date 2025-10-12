@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
-import MomentLayout from "../components/MomentLayout";
+import MomentLayout from "../components/Grid";
 import { formatDate } from "../utils/formatDate";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;

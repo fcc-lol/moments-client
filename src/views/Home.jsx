@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import exifr from "exifr";
 import "leaflet/dist/leaflet.css";
-import MomentLayout from "../components/MomentLayout";
+import MomentLayout from "../components/Grid";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 

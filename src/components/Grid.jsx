@@ -10,7 +10,7 @@ import {
   DateCard,
   WeatherCard,
   PreviewImage
-} from "./MomentCard";
+} from "./Card";
 import { formatDate } from "../utils/formatDate";
 
 const ContentWrapper = styled.div`
