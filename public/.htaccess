@@ -8,7 +8,7 @@
   
   # Prerender for social media bots (share image crawlers)
   # Detect common social media bots by user-agent and proxy to server for Open Graph tags
-  # Note: Requires mod_proxy and mod_proxy_http to be enabled
+  SSLProxyEngine On
   RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebookbot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|DiscordBot|Pinterest|Discordbot|redditbot|Applebot|ia_archiver|bingbot|slurp|DuckDuckBot) [NC]
   RewriteCond %{REQUEST_URI} ^/([a-zA-Z0-9_-]+)/?$
   RewriteCond %{REQUEST_URI} !^/(slideshow)/?$
