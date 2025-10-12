@@ -6,19 +6,27 @@
   RewriteCond %{HTTP:Authorization} .
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
   
-  # Prerender for social media bots (share image crawlers)
-  # Detect common social media bots by user-agent and proxy to server for Open Graph tags
+  # Prerendering for social media crawlers
+  # Check if the request is from a known crawler
   RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebookbot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|DiscordBot|Pinterest|Discordbot|redditbot|Applebot|ia_archiver|bingbot|slurp|DuckDuckBot) [NC]
   RewriteCond %{REQUEST_URI} ^/([a-zA-Z0-9_-]+)/?$
   RewriteCond %{REQUEST_URI} !^/(slideshow)/?$
-  RewriteRule ^([a-zA-Z0-9_-]+)/?$ https://moments-server.fcc.lol/share-preview/$1 [P,L]
+  RewriteRule ^([a-zA-Z0-9_-]+)/?$ https://moments-server.fcc.lol/share-preview/$1? [R=302,L]
   
-  # Don't rewrite files or directories
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
+  # Serve existing files directly
+  RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
   
-  # Rewrite everything else to index.html to allow html5 state links
-  RewriteRule ^ index.html [L]
+  # Normal SPA routing for regular users
+  # Redirect all requests to index.html except for existing files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [QSA,L]
 </IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Specify default character set
+AddDefaultCharset UTF-8
 
