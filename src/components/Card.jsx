@@ -8,6 +8,7 @@ const Card = styled.div`
   border-radius: 0.75rem;
   padding: 1.75rem;
   font-family: "DM Mono", monospace;
+  border: none;
 `;
 
 export const DateCard = styled(Card)`
