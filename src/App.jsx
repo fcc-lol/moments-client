@@ -4,8 +4,7 @@ import exifr from "exifr";
 import { MapContainer, TileLayer, Circle, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Google Maps API Key - Replace with your own key
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 const DropZone = styled.div`
   display: flex;
@@ -19,6 +18,16 @@ const DropText = styled.p`
   margin: auto;
   font-family: "DM Mono", monospace;
   text-transform: uppercase;
+  padding-bottom: 2rem;
+`;
+
+const ValidationMessage = styled.div`
+  color: ${(props) =>
+    props.$isError ? "rgb(255, 100, 100)" : "rgba(255, 255, 255, 0.5)"};
+  margin: auto;
+  font-family: "DM Mono", monospace;
+  text-transform: uppercase;
+  text-align: center;
   padding-bottom: 2rem;
 `;
 
@@ -166,6 +175,7 @@ const PreviewImage = styled.img`
   height: 100%;
   object-fit: cover;
   border-radius: 0.75rem;
+  user-select: none;
 `;
 
 const NoExifMessage = styled.p`
@@ -204,7 +214,7 @@ const DragOverlay = styled.div`
   }
 `;
 
-// Component to fix map size on mount and recenter
+// Component to fix map size on mount
 const MapResizer = ({ center }) => {
   const map = useMap();
 
@@ -212,9 +222,9 @@ const MapResizer = ({ center }) => {
     // Small delay to ensure container has rendered
     const timer = setTimeout(() => {
       map.invalidateSize();
-      // Recenter the map after resize
+      // Always enforce the center position with offset
       if (center) {
-        map.setView(center, map.getZoom());
+        map.setView(center, map.getZoom(), { animate: false });
       }
     }, 100);
 
@@ -225,6 +235,11 @@ const MapResizer = ({ center }) => {
 };
 
 function App() {
+  // API Key validation states
+  const [isValidatingKey, setIsValidatingKey] = useState(true);
+  const [isValidKey, setIsValidKey] = useState(false);
+  const [validationError, setValidationError] = useState(null);
+
   const [isDragging, setIsDragging] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -238,6 +253,51 @@ function App() {
   const imageRef = useRef(null);
   const overlayTimeoutRef = useRef(null);
   const dragCounterRef = useRef(0);
+
+  // Validate API key on mount
+  useEffect(() => {
+    const validateApiKey = async () => {
+      try {
+        // Get API key from URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const apiKey = params.get("fccApiKey") || params.get("apiKey");
+
+        if (!apiKey) {
+          setValidationError("No API key");
+          setIsValidatingKey(false);
+          return;
+        }
+
+        // Validate the API key with the server
+        const response = await fetch(`${SERVER_URL}/validate-api-key`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ apiKey })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.valid) {
+          setIsValidKey(true);
+          setValidationError(null);
+        } else {
+          setIsValidKey(false);
+          setValidationError(data.message || "Invalid API key");
+        }
+      } catch (error) {
+        console.error("Error validating API key:", error);
+        setValidationError(
+          "Failed to validate API key. Please check your connection."
+        );
+      } finally {
+        setIsValidatingKey(false);
+      }
+    };
+
+    validateApiKey();
+  }, []);
 
   useEffect(() => {
     if (isDragging || isLoading) {
@@ -366,104 +426,37 @@ function App() {
   };
 
   const fetchLocationName = async (lat, lng) => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      console.warn("Google Maps API key not configured");
-      setLocationData(null);
-      return;
-    }
-
     try {
-      let businessName = null;
+      // Get API key from URL parameters
+      const params = new URLSearchParams(window.location.search);
+      const apiKey = params.get("fccApiKey") || params.get("apiKey");
 
-      // Try to find a nearby business/POI first
-      const placesResponse = await fetch(
-        "https://places.googleapis.com/v1/places:searchNearby",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
-            "X-Goog-FieldMask": "places.displayName"
-          },
-          body: JSON.stringify({
-            locationRestriction: {
-              circle: {
-                center: {
-                  latitude: lat,
-                  longitude: lng
-                },
-                radius: 50.0
-              }
-            },
-            maxResultCount: 1
-          })
-        }
-      );
-
-      if (placesResponse.ok) {
-        const placesData = await placesResponse.json();
-        if (placesData.places && placesData.places.length > 0) {
-          const closestPlace = placesData.places[0];
-          businessName =
-            closestPlace.displayName?.text || closestPlace.displayName;
-        }
+      if (!apiKey) {
+        console.warn("No API key available");
+        setLocationData(null);
+        return;
       }
 
-      // Get address components from Geocoding API
-      const geocodeResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
-      );
+      // Call server endpoint for geocoding
+      const response = await fetch(`${SERVER_URL}/geocode-location`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          apiKey,
+          lat,
+          lng
+        })
+      });
 
-      if (geocodeResponse.ok) {
-        const geocodeData = await geocodeResponse.json();
-
-        if (geocodeData.status === "OK" && geocodeData.results.length) {
-          const firstResult = geocodeData.results[0];
-          const components = firstResult.address_components;
-
-          // Helper to get component value
-          const getComponent = (type) => {
-            const component = components.find((c) => c.types.includes(type));
-            return component?.long_name || "";
-          };
-
-          const getShortComponent = (type) => {
-            const component = components.find((c) => c.types.includes(type));
-            return component?.short_name || "";
-          };
-
-          // Build structured address
-          const streetNumber = getComponent("street_number");
-          const route = getComponent("route");
-          const street = [streetNumber, route].filter(Boolean).join(" ");
-
-          // Try to get locality, with fallbacks
-          const locality =
-            getComponent("locality") ||
-            getComponent("sublocality") ||
-            getComponent("neighborhood") ||
-            getComponent("postal_town");
-          const state = getShortComponent("administrative_area_level_1");
-          const postalCode = getComponent("postal_code");
-
-          const cityStateParts = [locality, state].filter(Boolean).join(", ");
-          const cityLine = [cityStateParts, postalCode]
-            .filter(Boolean)
-            .join(" ");
-
-          const country = getComponent("country");
-
-          setLocationData({
-            line1: businessName || street || locality || "Location",
-            line2: businessName && street ? street : null,
-            line3: cityLine,
-            line4: country
-          });
-          return;
-        }
+      if (response.ok) {
+        const data = await response.json();
+        setLocationData(data);
+      } else {
+        console.error("Error fetching location:", await response.text());
+        setLocationData(null);
       }
-
-      setLocationData(null);
     } catch (error) {
       console.error("Error fetching location name:", error);
       setLocationData(null);
@@ -716,10 +709,25 @@ function App() {
     : null;
   const hasGPS = exifData?.latitude && exifData?.longitude;
 
-  // Offset the map center slightly to move the marker up in the viewport
+  // Offset the map center slightly to position the marker higher in the viewport
   const mapCenter = hasGPS
     ? [exifData.latitude - 0.001, exifData.longitude]
     : null;
+
+  // Show validation message if key is not valid yet
+  if (isValidatingKey) {
+    return <DropZone />;
+  }
+
+  if (!isValidKey) {
+    return (
+      <DropZone>
+        <ValidationMessage $isError={true}>
+          {validationError || "Invalid API key"}
+        </ValidationMessage>
+      </DropZone>
+    );
+  }
 
   return (
     <DropZone
