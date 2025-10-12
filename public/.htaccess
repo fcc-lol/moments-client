@@ -6,6 +6,13 @@
   RewriteCond %{HTTP:Authorization} .
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
   
+  # Prerender for social media bots (share image crawlers)
+  # Detect common social media bots by user-agent and proxy to server for Open Graph tags
+  # Note: Requires mod_proxy and mod_proxy_http to be enabled
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebookbot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|DiscordBot|Pinterest|Discordbot|redditbot|Applebot|ia_archiver) [NC]
+  RewriteCond %{REQUEST_URI} ^/([a-zA-Z0-9_-]+)/?$
+  RewriteRule ^([a-zA-Z0-9_-]+)/?$ https://moments-server.fcc.lol/share-preview/$1 [P,L]
+  
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
