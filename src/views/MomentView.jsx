@@ -122,9 +122,7 @@ function MomentView() {
   if (showLoading) {
     return (
       <Container>
-        <LoadingMessage $isLoading={!loadingFadingOut}>
-          Loading...
-        </LoadingMessage>
+        <LoadingMessage $isLoading={!loadingFadingOut}>Loading</LoadingMessage>
       </Container>
     );
   }
