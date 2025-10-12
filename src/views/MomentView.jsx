@@ -21,17 +21,51 @@ const ErrorMessage = styled.p`
   padding-bottom: 2rem;
 `;
 
+const LoadingMessage = styled.p`
+  color: rgba(255, 255, 255, 0.5);
+  font-family: "DM Mono", monospace;
+  margin: auto;
+  text-transform: uppercase;
+  padding-bottom: 2rem;
+  animation: ${(props) => (props.$isLoading ? "fadeIn" : "fadeOut")} 0.4s
+    ease-in-out forwards;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+`;
+
 function MomentView() {
   const { id } = useParams();
   const [moment, setMoment] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
+  const [showLoading, setShowLoading] = useState(true);
+  const [loadingFadingOut, setLoadingFadingOut] = useState(false);
 
   useEffect(() => {
     const fetchMoment = async () => {
-      // Reset visibility when loading new moment
+      // Reset states when loading new moment
       setIsVisible(false);
+      setShowLoading(true);
+      setLoadingFadingOut(false);
+      setLoading(true);
+      setError(null);
 
       try {
         const response = await fetch(`${SERVER_URL}/moments/${id}`);
@@ -44,14 +78,23 @@ function MomentView() {
         const data = await response.json();
         setMoment(data);
 
-        // Fade in after a short delay
+        // Start fading out the loading message
+        setLoadingFadingOut(true);
+
+        // Wait for fade-out animation to complete
         setTimeout(() => {
-          setIsVisible(true);
-        }, 100);
+          setLoading(false);
+          setShowLoading(false);
+
+          // Fade in the content after a brief delay
+          setTimeout(() => {
+            setIsVisible(true);
+          }, 50);
+        }, 400); // Match the fadeOut animation duration
       } catch (err) {
         setError(err.message);
-      } finally {
         setLoading(false);
+        setShowLoading(false);
       }
     };
 
@@ -76,8 +119,14 @@ function MomentView() {
     }
   }, [moment]);
 
-  if (loading) {
-    return <Container />;
+  if (showLoading) {
+    return (
+      <Container>
+        <LoadingMessage $isLoading={!loadingFadingOut}>
+          Loading...
+        </LoadingMessage>
+      </Container>
+    );
   }
 
   if (error) {
