@@ -19,6 +19,13 @@ export const DateCard = styled(Card)`
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
+  text-transform: uppercase;
+
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 `;
 
 export const LocationCard = styled(Card)`
@@ -50,6 +57,10 @@ export const LocationAddress = styled.div`
 export const DateWeatherWrapper = styled.div`
   display: flex;
   gap: 2rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 export const WeatherCard = styled(Card)`
@@ -62,6 +73,12 @@ export const WeatherCard = styled(Card)`
   text-transform: uppercase;
   flex: 1;
   align-items: flex-end;
+
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 `;
 
 export const PreviewImage = styled.img`
