@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { flushSync } from "react-dom";
 import styled from "styled-components";
 import exifr from "exifr";
 import "leaflet/dist/leaflet.css";
@@ -267,17 +268,21 @@ function HomeView() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    // Clear previous state BEFORE setting loading to ensure clean slate
-    setImagePreview(null);
-    setExifData(null);
-    setLocationData(null);
-    setWeatherData(null);
-    setDominantColor(null);
-    setTextColor(null);
-    setSavedMomentId(null);
-    setIsWaitingForServer(false);
-    setShowProcessing(false);
-    setIsFadingOut(false);
+    // Force synchronous clearing of all state to prevent stale data
+    flushSync(() => {
+      setImagePreview(null);
+      setExifData(null);
+      setLocationData(null);
+      setWeatherData(null);
+      setDominantColor(null);
+      setTextColor(null);
+      setSavedMomentId(null);
+      setIsWaitingForServer(false);
+      setShowProcessing(false);
+      setIsFadingOut(false);
+    });
+    
+    // Clear refs
     metadataReadyRef.current = false;
     imageLoadedRef.current = false;
     pendingColorsRef.current = null;
@@ -286,10 +291,7 @@ function HomeView() {
       location: null,
       weather: null
     };
-
-    // Wait a tick for state updates to flush
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
+    
     // Set loading and current file after state is cleared
     setIsLoading(true);
     setCurrentImageFile(file);
@@ -585,22 +587,25 @@ function HomeView() {
           return;
         }
 
-        // Store the moment ID for the copy link button
-        setSavedMomentId(data.momentId);
+        // Force synchronous state updates to prevent flash of old data
+        flushSync(() => {
+          // Store the moment ID for the copy link button
+          setSavedMomentId(data.momentId);
 
-        // Update location data from server response
-        if (data.locationData) {
-          setLocationData(data.locationData);
-        }
+          // Update location data from server response
+          if (data.locationData) {
+            setLocationData(data.locationData);
+          }
 
-        // Stop loading states
-        setIsLoading(false);
-        setIsWaitingForServer(false);
-
-        // Wait extra time for all state updates to fully propagate before showing content
+          // Stop loading states
+          setIsLoading(false);
+          setIsWaitingForServer(false);
+        });
+        
+        // Now that state is fully updated, wait for Processing fade out, then show content
         setTimeout(() => {
           setIsContentVisible(true);
-        }, 400);
+        }, 300);
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
