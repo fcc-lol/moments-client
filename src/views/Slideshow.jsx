@@ -17,7 +17,6 @@ const ErrorMessage = styled.p`
   font-family: "DM Mono", monospace;
   margin: auto;
   text-transform: uppercase;
-  padding-bottom: 2rem;
 `;
 
 const SLIDESHOW_INTERVAL = 5000; // 5 seconds per slide

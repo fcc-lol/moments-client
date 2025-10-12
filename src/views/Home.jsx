@@ -18,7 +18,6 @@ const DropText = styled.p`
   margin: auto;
   font-family: "DM Mono", monospace;
   text-transform: uppercase;
-  padding-bottom: 2rem;
 `;
 
 const ValidationMessage = styled.div`
@@ -28,7 +27,6 @@ const ValidationMessage = styled.div`
   font-family: "DM Mono", monospace;
   text-transform: uppercase;
   text-align: center;
-  padding-bottom: 2rem;
 `;
 
 const LoadingMessage = styled.div`
@@ -42,7 +40,6 @@ const LoadingMessage = styled.div`
   text-align: center;
   z-index: 10000;
   pointer-events: none;
-  padding-bottom: 2rem;
   animation: ${(props) => (props.$isFadingOut ? "fadeOut" : "fadeIn")} 0.3s
     ease-in-out forwards;
 

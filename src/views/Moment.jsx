@@ -19,7 +19,6 @@ const ErrorMessage = styled.p`
   font-family: "DM Mono", monospace;
   margin: auto;
   text-transform: uppercase;
-  padding-bottom: 2rem;
 `;
 
 const LoadingOverlay = styled.div`
@@ -41,7 +40,6 @@ const LoadingMessage = styled.p`
   font-family: "DM Mono", monospace;
   margin: auto;
   text-transform: uppercase;
-  padding-bottom: 2rem;
 `;
 
 function MomentView() {
