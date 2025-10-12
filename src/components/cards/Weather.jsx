@@ -13,6 +13,10 @@ const StyledCard = styled(Card)`
   flex: 1;
   align-items: flex-end;
 
+  div {
+    text-align: right;
+  }
+
   @media (max-width: 768px) {
     flex-direction: row;
     justify-content: space-between;
