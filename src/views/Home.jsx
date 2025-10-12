@@ -593,14 +593,19 @@ function HomeView() {
           setLocationData(data.locationData);
         }
 
-        // Stop loading states first
-        setIsLoading(false);
-        setIsWaitingForServer(false);
+        // Wait for React to flush state updates before showing content
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Stop loading states
+            setIsLoading(false);
+            setIsWaitingForServer(false);
 
-        // Wait for state updates to flush, then wait for "Processing" fade out, then fade in content
-        setTimeout(() => {
-          setIsContentVisible(true);
-        }, 350); // 50ms for state flush + 300ms for processing fade out
+            // Wait for "Processing" fade out animation, then fade in content
+            setTimeout(() => {
+              setIsContentVisible(true);
+            }, 300);
+          });
+        });
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
