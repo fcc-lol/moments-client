@@ -30,6 +30,7 @@ function SlideShowView() {
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const hasShownRef = React.useRef(false);
 
   // Fetch moment IDs and load first two moments
   useEffect(() => {
@@ -137,21 +138,28 @@ function SlideShowView() {
   useEffect(() => {
     setImageLoaded(false);
     setIsVisible(false);
+    hasShownRef.current = false;
+
+    let fallbackTimer = null;
 
     // If moment exists, set a short timeout to show it regardless of image load
     // This ensures we don't get stuck on black screen
-    const fallbackTimer = setTimeout(() => {
-      if (moments[currentIndex] && !loading) {
+    fallbackTimer = setTimeout(() => {
+      if (!hasShownRef.current && moments[currentIndex] && !loading) {
+        hasShownRef.current = true;
         setIsVisible(true);
       }
-    }, 200); // Reduced from 500ms to 200ms for faster fallback
+    }, 200);
 
-    return () => clearTimeout(fallbackTimer);
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
   }, [currentIndex, moments, loading]);
 
   // Handle image load - fade in content immediately
   useEffect(() => {
-    if (imageLoaded && !loading) {
+    if (imageLoaded && !loading && !hasShownRef.current) {
+      hasShownRef.current = true;
       setIsVisible(true);
     }
   }, [imageLoaded, loading]);
