@@ -216,41 +216,42 @@ function HomeView() {
 
   const handleDragEnter = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounterRef.current++;
-    if (dragCounterRef.current > 0) {
-      setIsDragging(true);
-    }
+    setIsDragging(true);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounterRef.current--;
-    if (dragCounterRef.current === 0) {
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
       setIsDragging(false);
     }
   };
 
   const handleDrop = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Reset drag state immediately
     dragCounterRef.current = 0;
+    setIsDragging(false);
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
       const file = files[0];
 
       // Check if it's an image
       if (file.type.startsWith("image/")) {
         await processImage(file);
-        setIsDragging(false);
-      } else {
-        setIsDragging(false);
       }
-    } else {
-      setIsDragging(false);
     }
   };
 
@@ -266,17 +267,13 @@ function HomeView() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    // Set loading immediately to prevent UI flicker
-    setIsLoading(true);
-
-    // Clear previous state
+    // Clear previous state BEFORE setting loading to ensure clean slate
     setImagePreview(null);
     setExifData(null);
     setLocationData(null);
     setWeatherData(null);
     setDominantColor(null);
     setTextColor(null);
-    setCurrentImageFile(file);
     setSavedMomentId(null);
     setIsWaitingForServer(false);
     setShowProcessing(false);
@@ -284,6 +281,13 @@ function HomeView() {
     metadataReadyRef.current = false;
     imageLoadedRef.current = false;
     pendingColorsRef.current = null;
+    
+    // Wait a tick for state updates to flush
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    
+    // Set loading and current file after state is cleared
+    setIsLoading(true);
+    setCurrentImageFile(file);
 
     // Create preview
     const reader = new FileReader();
@@ -319,7 +323,8 @@ function HomeView() {
           const weather = await fetchWeatherData(
             exif.latitude,
             exif.longitude,
-            exif.DateTimeOriginal
+            exif.DateTimeOriginal,
+            currentProcessingId
           );
 
           // Check again after async weather fetch
@@ -377,7 +382,7 @@ function HomeView() {
     }
   };
 
-  const fetchWeatherData = async (lat, lng, dateTime) => {
+  const fetchWeatherData = async (lat, lng, dateTime, processingId) => {
     try {
       // Format date for API (YYYY-MM-DD)
       const date = new Date(dateTime);
@@ -388,8 +393,20 @@ function HomeView() {
         `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}&start_date=${dateStr}&end_date=${dateStr}&hourly=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=auto`
       );
 
+      // Check if this is still the current image being processed
+      if (processingId !== processingIdRef.current) {
+        console.log("Weather fetch aborted - outdated image");
+        return null;
+      }
+
       if (response.ok) {
         const data = await response.json();
+
+        // Check again after async JSON parsing
+        if (processingId !== processingIdRef.current) {
+          console.log("Weather fetch aborted - outdated image");
+          return null;
+        }
 
         if (data.hourly && data.hourly.time && data.hourly.time.length > 0) {
           // Find the closest hour to the photo time
@@ -450,16 +467,25 @@ function HomeView() {
               weatherDescriptions[weatherCode] || "Unknown conditions"
           };
 
-          setWeatherData(weatherInfo);
+          // Only update state if still the current image
+          if (processingId === processingIdRef.current) {
+            setWeatherData(weatherInfo);
+          }
           return weatherInfo;
         }
       }
 
-      setWeatherData(null);
+      // Only update state if still the current image
+      if (processingId === processingIdRef.current) {
+        setWeatherData(null);
+      }
       return null;
     } catch (error) {
       console.error("Error fetching weather data:", error);
-      setWeatherData(null);
+      // Only update state if still the current image
+      if (processingId === processingIdRef.current) {
+        setWeatherData(null);
+      }
       return null;
     }
   };
@@ -785,6 +811,7 @@ function HomeView() {
 
       {imagePreview && (
         <MomentLayout
+          key={processingIdRef.current}
           exifData={exifData}
           locationData={locationData}
           weatherData={weatherData}
