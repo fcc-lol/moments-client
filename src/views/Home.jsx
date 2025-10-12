@@ -575,6 +575,11 @@ function HomeView() {
       if (response.ok) {
         const data = await response.json();
 
+        // Check if still current image
+        if (processingId !== processingIdRef.current) {
+          return;
+        }
+
         // Store the moment ID for the copy link button
         setSavedMomentId(data.momentId);
 
@@ -582,14 +587,28 @@ function HomeView() {
         if (data.locationData) {
           setLocationData(data.locationData);
         }
+
+        // Show content after data is updated
+        setIsLoading(false);
+        setIsWaitingForServer(false);
+        setTimeout(() => {
+          setIsContentVisible(true);
+        }, 300);
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
+
+        // Show content even on error
+        setIsLoading(false);
+        setIsWaitingForServer(false);
+        setTimeout(() => {
+          setIsContentVisible(true);
+        }, 300);
       }
     } catch (error) {
       console.error("Error saving moment:", error);
-    } finally {
-      // Always show content when save completes (success or failure)
+
+      // Show content even on error
       setIsLoading(false);
       setIsWaitingForServer(false);
       setTimeout(() => {
