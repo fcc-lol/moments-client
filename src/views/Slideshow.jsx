@@ -134,17 +134,26 @@ function SlideShowView() {
     loadNextMoment();
   }, [currentIndex, momentIds, moments]);
 
-  // Reset states when currentIndex changes and handle visibility
+  // Reset states when currentIndex changes
   useEffect(() => {
     setImageLoaded(false);
     setIsVisible(false);
     hasShownRef.current = false;
+  }, [currentIndex]);
 
-    let fallbackTimer = null;
+  // Handle visibility - single source of truth
+  useEffect(() => {
+    if (hasShownRef.current) return;
 
-    // If moment exists, set a short timeout to show it regardless of image load
-    // This ensures we don't get stuck on black screen
-    fallbackTimer = setTimeout(() => {
+    // If image is loaded, show immediately
+    if (imageLoaded && !loading) {
+      hasShownRef.current = true;
+      setIsVisible(true);
+      return;
+    }
+
+    // Otherwise, set a fallback timeout
+    const fallbackTimer = setTimeout(() => {
       if (!hasShownRef.current && moments[currentIndex] && !loading) {
         hasShownRef.current = true;
         setIsVisible(true);
@@ -154,15 +163,7 @@ function SlideShowView() {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, [currentIndex, moments, loading]);
-
-  // Handle image load - fade in content immediately
-  useEffect(() => {
-    if (imageLoaded && !loading && !hasShownRef.current) {
-      hasShownRef.current = true;
-      setIsVisible(true);
-    }
-  }, [imageLoaded, loading]);
+  }, [imageLoaded, loading, moments, currentIndex]);
 
   // Auto-advance slideshow
   useEffect(() => {
