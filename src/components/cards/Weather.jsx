@@ -21,6 +21,10 @@ const StyledCard = styled(Card)`
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+
+    div {
+      text-align: unset;
+    }
   }
 `;
 
