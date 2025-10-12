@@ -119,6 +119,7 @@ function HomeView() {
   const [showProcessing, setShowProcessing] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const imageRef = useRef(null);
+  const processingImageRef = useRef(null);
   const overlayTimeoutRef = useRef(null);
   const dragCounterRef = useRef(0);
   const currentMetadataRef = useRef({
@@ -261,14 +262,7 @@ function HomeView() {
     processingIdRef.current += 1;
     const currentProcessingId = processingIdRef.current;
 
-    // Fade out immediately if there's existing content
-    if (imagePreview) {
-      setIsContentVisible(false);
-      // Small delay to let fade out complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    // Force synchronous clearing of all state to prevent stale data
+    // Immediately clear all state to unmount old content
     flushSync(() => {
       setImagePreview(null);
       setExifData(null);
@@ -636,10 +630,9 @@ function HomeView() {
   };
 
   const handleImageLoad = () => {
-    if (imageRef.current) {
+    const img = processingImageRef.current || imageRef.current;
+    if (img) {
       try {
-        const img = imageRef.current;
-
         // Check if image has valid dimensions
         if (!img.width || !img.height || img.width === 0 || img.height === 0) {
           console.warn("Image dimensions not ready");
@@ -853,7 +846,7 @@ function HomeView() {
 
       {imagePreview && !isContentVisible && (
         <img
-          ref={imageRef}
+          ref={processingImageRef}
           src={imagePreview}
           alt="Processing"
           onLoad={handleImageLoad}
@@ -872,8 +865,8 @@ function HomeView() {
           textColor={textColor}
           imageData={imagePreview}
           imageRef={imageRef}
-          onImageLoad={handleImageLoad}
-          onImageError={handleImageError}
+          onImageLoad={() => {}}
+          onImageError={() => {}}
           isVisible={isContentVisible}
           savedMomentId={savedMomentId}
         />
