@@ -281,6 +281,11 @@ function HomeView() {
     metadataReadyRef.current = false;
     imageLoadedRef.current = false;
     pendingColorsRef.current = null;
+    currentMetadataRef.current = {
+      exif: null,
+      location: null,
+      weather: null
+    };
 
     // Wait a tick for state updates to flush
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -506,7 +511,7 @@ function HomeView() {
       setIsWaitingForServer(false);
       setTimeout(() => {
         setIsContentVisible(true);
-      }, 300);
+      }, 350);
       return;
     }
 
@@ -521,7 +526,7 @@ function HomeView() {
         setIsWaitingForServer(false);
         setTimeout(() => {
           setIsContentVisible(true);
-        }, 300);
+        }, 350);
         return;
       }
 
@@ -588,32 +593,38 @@ function HomeView() {
           setLocationData(data.locationData);
         }
 
-        // Show content after data is updated
+        // Stop loading states first
         setIsLoading(false);
         setIsWaitingForServer(false);
+
+        // Wait for state updates to flush, then wait for "Processing" fade out, then fade in content
         setTimeout(() => {
           setIsContentVisible(true);
-        }, 300);
+        }, 350); // 50ms for state flush + 300ms for processing fade out
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
 
-        // Show content even on error
+        // Stop loading states first
         setIsLoading(false);
         setIsWaitingForServer(false);
+
+        // Show content even on error after fade out
         setTimeout(() => {
           setIsContentVisible(true);
-        }, 300);
+        }, 350);
       }
     } catch (error) {
       console.error("Error saving moment:", error);
 
-      // Show content even on error
+      // Stop loading states first
       setIsLoading(false);
       setIsWaitingForServer(false);
+
+      // Show content even on error after fade out
       setTimeout(() => {
         setIsContentVisible(true);
-      }, 300);
+      }, 350);
     }
   };
 
