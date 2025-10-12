@@ -146,6 +146,20 @@ const MapWrapper = styled.div`
   }
 `;
 
+const MapOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: ${(props) => props.$overlayColor || "rgba(0, 0, 0, 0.2)"};
+  pointer-events: none;
+  border-radius: 0.75rem;
+  z-index: 1000;
+  opacity: 0.1;
+  mix-blend-mode: screen;
+`;
+
 const MapCoords = styled.div`
   position: absolute;
   bottom: 1.75rem;
@@ -206,7 +220,7 @@ function MomentLayout({
 
   // Offset the map center slightly to position the marker higher in the viewport
   const mapCenter = hasGPS
-    ? [exifData.latitude - 0.001, exifData.longitude]
+    ? [exifData.latitude - 0.03, exifData.longitude]
     : null;
 
   const handleCopyLink = async () => {
@@ -284,7 +298,7 @@ function MomentLayout({
               <MapContainer
                 key={`${exifData.latitude}-${exifData.longitude}`}
                 center={mapCenter}
-                zoom={14}
+                zoom={10}
                 zoomControl={false}
                 scrollWheelZoom={false}
                 dragging={false}
@@ -299,7 +313,7 @@ function MomentLayout({
                 />
                 <Circle
                   center={[exifData.latitude, exifData.longitude]}
-                  radius={50}
+                  radius={800}
                   pathOptions={{
                     color: dominantColor || "white",
                     fillColor: dominantColor || "white",
@@ -309,6 +323,7 @@ function MomentLayout({
                   }}
                 />
               </MapContainer>
+              <MapOverlay $overlayColor={dominantColor} />
               <MapCoords $textColor={textColor}>
                 <span>{exifData.latitude.toFixed(6)}</span>
                 <span>{exifData.longitude.toFixed(6)}</span>
