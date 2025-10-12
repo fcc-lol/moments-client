@@ -11,6 +11,7 @@ const Container = styled.div`
   height: 100%;
   background: #000;
   color: #fff;
+  position: relative;
 `;
 
 const ErrorMessage = styled.p`
@@ -21,32 +22,26 @@ const ErrorMessage = styled.p`
   padding-bottom: 2rem;
 `;
 
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #000;
+  z-index: 10;
+  pointer-events: ${(props) => (props.$show ? "auto" : "none")};
+  opacity: ${(props) => (props.$show ? 1 : 0)};
+  transition: opacity 0.4s ease-in-out;
+`;
+
 const LoadingMessage = styled.p`
   color: rgba(255, 255, 255, 0.5);
   font-family: "DM Mono", monospace;
   margin: auto;
   text-transform: uppercase;
   padding-bottom: 2rem;
-  animation: ${(props) => (props.$isLoading ? "fadeIn" : "fadeOut")} 0.4s
-    ease-in-out forwards;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
 `;
 
 function MomentView() {
@@ -56,16 +51,16 @@ function MomentView() {
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
-  const [loadingFadingOut, setLoadingFadingOut] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     const fetchMoment = async () => {
       // Reset states when loading new moment
       setIsVisible(false);
       setShowLoading(true);
-      setLoadingFadingOut(false);
       setLoading(true);
       setError(null);
+      setImageLoaded(false);
 
       try {
         const response = await fetch(`${SERVER_URL}/moments/${id}`);
@@ -77,20 +72,8 @@ function MomentView() {
 
         const data = await response.json();
         setMoment(data);
-
-        // Start fading out the loading message
-        setLoadingFadingOut(true);
-
-        // Wait for fade-out animation to complete
-        setTimeout(() => {
-          setLoading(false);
-          setShowLoading(false);
-
-          // Fade in the content after a brief delay
-          setTimeout(() => {
-            setIsVisible(true);
-          }, 50);
-        }, 400); // Match the fadeOut animation duration
+        setLoading(false);
+        // Don't hide loading message yet - wait for image to load
       } catch (err) {
         setError(err.message);
         setLoading(false);
@@ -100,6 +83,19 @@ function MomentView() {
 
     fetchMoment();
   }, [id]);
+
+  // Handle image load - fade out loading and fade in content
+  useEffect(() => {
+    if (imageLoaded && !loading) {
+      // Start fading out the loading message
+      setShowLoading(false);
+
+      // Wait for fade-out animation to complete, then fade in content
+      setTimeout(() => {
+        setIsVisible(true);
+      }, 400); // Wait for loading overlay fade-out to complete
+    }
+  }, [imageLoaded, loading]);
 
   // Update page title when moment data changes
   useEffect(() => {
@@ -119,13 +115,15 @@ function MomentView() {
     }
   }, [moment]);
 
-  if (showLoading) {
-    return (
-      <Container>
-        <LoadingMessage $isLoading={!loadingFadingOut}>Loading</LoadingMessage>
-      </Container>
-    );
-  }
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
+  const handleImageError = () => {
+    setError("Failed to load image");
+    setLoading(false);
+    setShowLoading(false);
+  };
 
   if (error) {
     return (
@@ -136,6 +134,16 @@ function MomentView() {
   }
 
   if (!moment) {
+    // Still loading data or moment not found
+    if (loading) {
+      return (
+        <Container>
+          <LoadingOverlay $show={true}>
+            <LoadingMessage>Loading</LoadingMessage>
+          </LoadingOverlay>
+        </Container>
+      );
+    }
     return (
       <Container>
         <ErrorMessage>Moment not found</ErrorMessage>
@@ -143,16 +151,30 @@ function MomentView() {
     );
   }
 
+  // Construct full image URL
+  const imageData = moment.imageUrl || moment.imageData;
+  let imageUrl = imageData;
+  if (imageUrl && !imageUrl.startsWith("http")) {
+    // If it doesn't start with /, add it
+    imageUrl = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+    imageUrl = `${SERVER_URL}${imageUrl}`;
+  }
+
   return (
     <Container>
+      <LoadingOverlay $show={showLoading}>
+        <LoadingMessage>Loading</LoadingMessage>
+      </LoadingOverlay>
       <MomentLayout
         exifData={moment.exifData}
         locationData={moment.locationData}
         weatherData={moment.weatherData}
         dominantColor={moment.dominantColor}
         textColor={moment.textColor}
-        imageData={moment.imageData}
+        imageData={imageUrl}
         isVisible={isVisible}
+        onImageLoad={handleImageLoad}
+        onImageError={handleImageError}
       />
     </Container>
   );

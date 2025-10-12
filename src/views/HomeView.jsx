@@ -432,8 +432,6 @@ function HomeView() {
   };
 
   const saveMoment = async (colors, location, weather, exif) => {
-    console.log("saveMoment called with:", { colors, location, weather, exif });
-
     // Only save if we have an image file and all data is ready
     if (!currentImageFile) {
       console.warn("No image file to save");
@@ -444,8 +442,6 @@ function HomeView() {
       // Get API key from URL parameters
       const params = new URLSearchParams(window.location.search);
       const apiKey = params.get("fccApiKey") || params.get("apiKey");
-
-      console.log("API key found:", apiKey ? "Yes" : "No");
 
       if (!apiKey) {
         console.warn("No API key available for saving");
@@ -494,34 +490,21 @@ function HomeView() {
         formData.append("textColor", colors.textColor);
       }
 
-      console.log("Sending moment to server:", `${SERVER_URL}/save-moment`);
-
       // Send to server
       const response = await fetch(`${SERVER_URL}/save-moment`, {
         method: "POST",
         body: formData
       });
 
-      console.log("Server response status:", response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log("Server response data:", data);
 
-        if (data.duplicate) {
-          console.log("Image already exists on server:", data.momentId);
-        } else {
-          console.log("Moment saved successfully:", data.momentId);
-        }
         // Store the moment ID for the copy link button
         setSavedMomentId(data.momentId);
 
         // Update location data from server response
         if (data.locationData) {
-          console.log("Setting location data:", data.locationData);
           setLocationData(data.locationData);
-        } else {
-          console.log("No location data in response");
         }
 
         // Hide waiting message, then fade in the view after processing text fades out
