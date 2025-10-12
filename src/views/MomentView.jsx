@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
 import MomentLayout from "../components/MomentLayout";
+import { formatDate } from "../utils/formatDate";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -56,6 +57,24 @@ function MomentView() {
 
     fetchMoment();
   }, [id]);
+
+  // Update page title when moment data changes
+  useEffect(() => {
+    if (moment) {
+      const placeName = moment.locationData?.line1 || "Location";
+      const dateInfo = moment.exifData?.DateTimeOriginal
+        ? formatDate(moment.exifData.DateTimeOriginal)
+        : null;
+
+      if (dateInfo) {
+        document.title = `${placeName} – ${dateInfo.date}`;
+      } else {
+        document.title = placeName;
+      }
+    } else {
+      document.title = "Moments";
+    }
+  }, [moment]);
 
   if (loading) {
     return <Container />;
