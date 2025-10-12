@@ -17,6 +17,7 @@ const ErrorMessage = styled.p`
   font-family: "DM Mono", monospace;
   margin: auto;
   text-transform: uppercase;
+  padding-bottom: 2rem;
 `;
 
 const SLIDESHOW_INTERVAL = 5000; // 5 seconds per slide
@@ -30,6 +31,7 @@ function SlideShowView() {
   const [isVisible, setIsVisible] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const hasShownRef = React.useRef(false);
+  const preloadedImagesRef = React.useRef({});
 
   // Fetch moment IDs and load first two moments
   useEffect(() => {
@@ -80,7 +82,7 @@ function SlideShowView() {
 
       // Check if we already have the next moment loaded
       if (moments[nextIndex]) {
-        // Preload the next image
+        // Preload the next image if not already preloaded
         const imageData =
           moments[nextIndex].imageUrl || moments[nextIndex].imageData;
         let imageUrl = imageData;
@@ -89,9 +91,17 @@ function SlideShowView() {
           imageUrl = `${SERVER_URL}${imageUrl}`;
         }
 
-        // Create an image element to preload
-        const img = new Image();
-        img.src = imageUrl;
+        // Only preload if we haven't already
+        if (!preloadedImagesRef.current[nextIndex]) {
+          const img = new Image();
+          img.onload = () => {
+            preloadedImagesRef.current[nextIndex] = img;
+          };
+          img.onerror = () => {
+            console.error(`Failed to preload image for moment ${nextIndex}`);
+          };
+          img.src = imageUrl;
+        }
 
         return;
       }
@@ -122,8 +132,14 @@ function SlideShowView() {
           imageUrl = `${SERVER_URL}${imageUrl}`;
         }
 
-        // Create an image element to preload
+        // Create an image element to preload and store it
         const img = new Image();
+        img.onload = () => {
+          preloadedImagesRef.current[nextIndex] = img;
+        };
+        img.onerror = () => {
+          console.error(`Failed to preload image for moment ${nextIndex}`);
+        };
         img.src = imageUrl;
       } catch (err) {
         console.error("Error loading next moment:", err);
