@@ -269,7 +269,6 @@ function HomeView() {
     }
 
     // Force synchronous clearing of all state to prevent stale data
-    console.log("Clearing all state for processingId:", currentProcessingId);
     flushSync(() => {
       setImagePreview(null);
       setExifData(null);
@@ -282,7 +281,6 @@ function HomeView() {
       setShowProcessing(false);
       setIsFadingOut(false);
     });
-    console.log("State cleared");
 
     // Clear refs
     metadataReadyRef.current = false;
@@ -591,7 +589,6 @@ function HomeView() {
 
         // Update location data first
         if (data.locationData) {
-          console.log("Setting new locationData:", data.locationData);
           flushSync(() => {
             setLocationData(data.locationData);
           });
@@ -606,10 +603,6 @@ function HomeView() {
 
         // Wait for Processing fade out, then show content
         setTimeout(() => {
-          console.log(
-            "Making content visible with processingId:",
-            processingId
-          );
           flushSync(() => {
             setIsContentVisible(true);
           });
@@ -857,7 +850,18 @@ function HomeView() {
 
       {!imagePreview && !isLoading && <DropText>Drop image here</DropText>}
 
-      {imagePreview && (
+      {imagePreview && !isContentVisible && (
+        <img
+          ref={imageRef}
+          src={imagePreview}
+          alt="Processing"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          style={{ display: 'none' }}
+        />
+      )}
+
+      {imagePreview && isContentVisible && (
         <MomentLayout
           key={`moment-${processingIdRef.current}`}
           exifData={exifData}
