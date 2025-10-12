@@ -298,11 +298,9 @@ function HomeView() {
           setIsLoading(false);
         });
 
-        // Wait for Processing fade out, then show content
+        // Wait for Processing fade out, then trigger fade-in
         setTimeout(() => {
-          flushSync(() => {
-            setIsContentVisible(true);
-          });
+          setIsContentVisible(true);
         }, 300);
       } else {
         const errorData = await response.json();
@@ -346,7 +344,7 @@ function HomeView() {
 
       {!imagePreview && !isLoading && <DropText>Drop image here</DropText>}
 
-      {imagePreview && isContentVisible && momentData && (
+      {imagePreview && momentData && (
         <MomentLayout
           exifData={momentData.exifData}
           locationData={momentData.locationData}
