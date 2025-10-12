@@ -239,7 +239,7 @@ function HomeView() {
   const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Reset drag state immediately
     dragCounterRef.current = 0;
     setIsDragging(false);
@@ -281,10 +281,10 @@ function HomeView() {
     metadataReadyRef.current = false;
     imageLoadedRef.current = false;
     pendingColorsRef.current = null;
-    
+
     // Wait a tick for state updates to flush
     await new Promise((resolve) => setTimeout(resolve, 0));
-    
+
     // Set loading and current file after state is cleared
     setIsLoading(true);
     setCurrentImageFile(file);
@@ -372,6 +372,8 @@ function HomeView() {
     // Mark metadata as ready and trigger save if image is already loaded
     metadataReadyRef.current = true;
     if (imageLoadedRef.current && pendingColorsRef.current) {
+      setIsLoading(false);
+      setIsWaitingForServer(true);
       saveMoment(
         pendingColorsRef.current,
         currentMetadataRef.current.location,
@@ -500,6 +502,11 @@ function HomeView() {
     // Only save if we have an image file and all data is ready
     if (!currentImageFile) {
       console.warn("No image file to save");
+      setIsLoading(false);
+      setIsWaitingForServer(false);
+      setTimeout(() => {
+        setIsContentVisible(true);
+      }, 300);
       return;
     }
 
@@ -510,7 +517,11 @@ function HomeView() {
 
       if (!apiKey) {
         console.warn("No API key available for saving");
+        setIsLoading(false);
         setIsWaitingForServer(false);
+        setTimeout(() => {
+          setIsContentVisible(true);
+        }, 300);
         return;
       }
 
@@ -571,24 +582,15 @@ function HomeView() {
         if (data.locationData) {
           setLocationData(data.locationData);
         }
-
-        // Hide waiting message, then fade in the view after processing text fades out
-        setIsWaitingForServer(false);
-        setTimeout(() => {
-          setIsContentVisible(true);
-        }, 300); // Wait for processing text to fade out
       } else {
         const errorData = await response.json();
         console.error("Failed to save moment:", errorData.error);
-        // Still show the view even if save failed
-        setIsWaitingForServer(false);
-        setTimeout(() => {
-          setIsContentVisible(true);
-        }, 300);
       }
     } catch (error) {
       console.error("Error saving moment:", error);
-      // Still show the view even if save failed
+    } finally {
+      // Always show content when save completes (success or failure)
+      setIsLoading(false);
       setIsWaitingForServer(false);
       setTimeout(() => {
         setIsContentVisible(true);
@@ -712,7 +714,8 @@ function HomeView() {
               currentId
             );
           } else {
-            setIsLoading(false);
+            // Keep loading state active until metadata is ready
+            // This prevents a blank screen between image load and metadata ready
           }
         }, 200);
       } catch (error) {
@@ -743,7 +746,8 @@ function HomeView() {
               currentId
             );
           } else {
-            setIsLoading(false);
+            // Keep loading state active until metadata is ready
+            // This prevents a blank screen between image load and metadata ready
           }
         }, 200);
       }
@@ -767,7 +771,8 @@ function HomeView() {
             currentId
           );
         } else {
-          setIsLoading(false);
+          // Keep loading state active until metadata is ready
+          // This prevents a blank screen between image load and metadata ready
         }
       }, 200);
     }
