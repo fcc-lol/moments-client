@@ -128,6 +128,7 @@ function HomeView() {
   const metadataReadyRef = useRef(false);
   const imageLoadedRef = useRef(false);
   const pendingColorsRef = useRef(null);
+  const processingIdRef = useRef(0); // Unique ID for each image processing cycle
 
   // Validate API key on mount
   useEffect(() => {
@@ -254,6 +255,10 @@ function HomeView() {
   };
 
   const processImage = async (file) => {
+    // Increment processing ID to track this specific image
+    processingIdRef.current += 1;
+    const currentProcessingId = processingIdRef.current;
+
     // Fade out immediately if there's existing content
     if (imagePreview) {
       setIsContentVisible(false);
@@ -283,7 +288,10 @@ function HomeView() {
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
-      setImagePreview(e.target.result);
+      // Only update preview if this is still the current processing cycle
+      if (currentProcessingId === processingIdRef.current) {
+        setImagePreview(e.target.result);
+      }
     };
     reader.readAsDataURL(file);
 
@@ -296,6 +304,12 @@ function HomeView() {
         iptc: true
       });
 
+      // Check if this is still the current processing cycle
+      if (currentProcessingId !== processingIdRef.current) {
+        console.log("Skipping EXIF update for outdated image");
+        return;
+      }
+
       if (exif) {
         setExifData(exif);
         currentMetadataRef.current.exif = exif;
@@ -307,6 +321,13 @@ function HomeView() {
             exif.longitude,
             exif.DateTimeOriginal
           );
+
+          // Check again after async weather fetch
+          if (currentProcessingId !== processingIdRef.current) {
+            console.log("Skipping weather update for outdated image");
+            return;
+          }
+
           currentMetadataRef.current.weather = weather;
         } else {
           setWeatherData(null);
@@ -325,11 +346,22 @@ function HomeView() {
       }
     } catch (error) {
       console.error("Error reading EXIF data:", error);
+      
+      // Check if still current before updating error state
+      if (currentProcessingId !== processingIdRef.current) {
+        return;
+      }
+
       setExifData(null);
       setLocationData(null);
       currentMetadataRef.current.exif = null;
       currentMetadataRef.current.location = null;
       currentMetadataRef.current.weather = null;
+    }
+
+    // Check one final time before marking as ready
+    if (currentProcessingId !== processingIdRef.current) {
+      return;
     }
 
     // Mark metadata as ready and trigger save if image is already loaded
@@ -339,7 +371,8 @@ function HomeView() {
         pendingColorsRef.current,
         currentMetadataRef.current.location,
         currentMetadataRef.current.weather,
-        currentMetadataRef.current.exif
+        currentMetadataRef.current.exif,
+        currentProcessingId
       );
     }
   };
@@ -431,7 +464,13 @@ function HomeView() {
     }
   };
 
-  const saveMoment = async (colors, location, weather, exif) => {
+  const saveMoment = async (colors, location, weather, exif, processingId) => {
+    // Check if this is still the current image being processed
+    if (processingId !== processingIdRef.current) {
+      console.log("Skipping save for outdated image processing cycle");
+      return;
+    }
+
     // Only save if we have an image file and all data is ready
     if (!currentImageFile) {
       console.warn("No image file to save");
@@ -626,6 +665,9 @@ function HomeView() {
 
         // Small delay to ensure map has rendered, then set colors
         setTimeout(() => {
+          // Get the current processing ID to check if still valid
+          const currentId = processingIdRef.current;
+
           setDominantColor(colors.dominantColor);
           setTextColor(colors.textColor);
 
@@ -640,7 +682,8 @@ function HomeView() {
               colors,
               currentMetadataRef.current.location,
               currentMetadataRef.current.weather,
-              currentMetadataRef.current.exif
+              currentMetadataRef.current.exif,
+              currentId
             );
           } else {
             setIsLoading(false);
@@ -653,6 +696,9 @@ function HomeView() {
           textColor: "rgb(230, 230, 230)"
         };
         setTimeout(() => {
+          // Get the current processing ID to check if still valid
+          const currentId = processingIdRef.current;
+
           setDominantColor(fallbackColors.dominantColor);
           setTextColor(fallbackColors.textColor);
 
@@ -667,7 +713,8 @@ function HomeView() {
               fallbackColors,
               currentMetadataRef.current.location,
               currentMetadataRef.current.weather,
-              currentMetadataRef.current.exif
+              currentMetadataRef.current.exif,
+              currentId
             );
           } else {
             setIsLoading(false);
@@ -676,6 +723,9 @@ function HomeView() {
       }
     } else {
       setTimeout(() => {
+        // Get the current processing ID to check if still valid
+        const currentId = processingIdRef.current;
+
         // Mark image as loaded and save if metadata is ready
         imageLoadedRef.current = true;
         pendingColorsRef.current = {};
@@ -687,7 +737,8 @@ function HomeView() {
             {},
             currentMetadataRef.current.location,
             currentMetadataRef.current.weather,
-            currentMetadataRef.current.exif
+            currentMetadataRef.current.exif,
+            currentId
           );
         } else {
           setIsLoading(false);
