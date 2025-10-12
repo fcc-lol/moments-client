@@ -346,7 +346,7 @@ function HomeView() {
       }
     } catch (error) {
       console.error("Error reading EXIF data:", error);
-      
+
       // Check if still current before updating error state
       if (currentProcessingId !== processingIdRef.current) {
         return;
