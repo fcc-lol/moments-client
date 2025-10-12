@@ -280,6 +280,7 @@ function HomeView() {
       setIsWaitingForServer(false);
       setShowProcessing(false);
       setIsFadingOut(false);
+      setIsContentVisible(false);
     });
 
     // Clear refs
@@ -857,7 +858,7 @@ function HomeView() {
           alt="Processing"
           onLoad={handleImageLoad}
           onError={handleImageError}
-          style={{ display: 'none' }}
+          style={{ display: "none" }}
         />
       )}
 
