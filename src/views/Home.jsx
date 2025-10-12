@@ -269,6 +269,7 @@ function HomeView() {
     }
 
     // Force synchronous clearing of all state to prevent stale data
+    console.log("Clearing all state for processingId:", currentProcessingId);
     flushSync(() => {
       setImagePreview(null);
       setExifData(null);
@@ -281,7 +282,8 @@ function HomeView() {
       setShowProcessing(false);
       setIsFadingOut(false);
     });
-    
+    console.log("State cleared");
+
     // Clear refs
     metadataReadyRef.current = false;
     imageLoadedRef.current = false;
@@ -291,7 +293,7 @@ function HomeView() {
       location: null,
       weather: null
     };
-    
+
     // Set loading and current file after state is cleared
     setIsLoading(true);
     setCurrentImageFile(file);
@@ -587,24 +589,30 @@ function HomeView() {
           return;
         }
 
-        // Force synchronous state updates to prevent flash of old data
-        flushSync(() => {
-          // Store the moment ID for the copy link button
-          setSavedMomentId(data.momentId);
-
-          // Update location data from server response
-          if (data.locationData) {
+        // Update location data first
+        if (data.locationData) {
+          console.log("Setting new locationData:", data.locationData);
+          flushSync(() => {
             setLocationData(data.locationData);
-          }
+          });
+        }
 
-          // Stop loading states
+        // Then update other states
+        flushSync(() => {
+          setSavedMomentId(data.momentId);
           setIsLoading(false);
           setIsWaitingForServer(false);
         });
-        
-        // Now that state is fully updated, wait for Processing fade out, then show content
+
+        // Wait for Processing fade out, then show content
         setTimeout(() => {
-          setIsContentVisible(true);
+          console.log(
+            "Making content visible with processingId:",
+            processingId
+          );
+          flushSync(() => {
+            setIsContentVisible(true);
+          });
         }, 300);
       } else {
         const errorData = await response.json();
@@ -853,7 +861,7 @@ function HomeView() {
         <MomentLayout
           key={`moment-${processingIdRef.current}`}
           exifData={exifData}
-          locationData={isContentVisible ? locationData : null}
+          locationData={locationData}
           weatherData={weatherData}
           dominantColor={dominantColor}
           textColor={textColor}
