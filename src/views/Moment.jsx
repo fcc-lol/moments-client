@@ -52,6 +52,7 @@ function MomentView() {
   const [isVisible, setIsVisible] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [locationData, setLocationData] = useState(null);
 
   useEffect(() => {
     const fetchMoment = async () => {
@@ -72,6 +73,7 @@ function MomentView() {
 
         const data = await response.json();
         setMoment(data);
+        setLocationData(data.locationData);
         setLoading(false);
         // Don't hide loading message yet - wait for image to load
       } catch (err) {
@@ -83,6 +85,22 @@ function MomentView() {
 
     fetchMoment();
   }, [id]);
+
+  const handleLocationUpdate = (updatedLocationData) => {
+    setLocationData(updatedLocationData);
+    // Also update the page title
+    if (updatedLocationData?.line1) {
+      const dateInfo = moment.exifData?.DateTimeOriginal
+        ? formatDate(moment.exifData.DateTimeOriginal)
+        : null;
+
+      if (dateInfo) {
+        document.title = `${updatedLocationData.line1} – ${dateInfo.date}`;
+      } else {
+        document.title = updatedLocationData.line1;
+      }
+    }
+  };
 
   // Handle image load - fade out loading and fade in content
   useEffect(() => {
@@ -167,7 +185,7 @@ function MomentView() {
       </LoadingOverlay>
       <MomentLayout
         exifData={moment.exifData}
-        locationData={moment.locationData}
+        locationData={locationData}
         weatherData={moment.weatherData}
         dominantColor={moment.dominantColor}
         textColor={moment.textColor}
@@ -175,6 +193,8 @@ function MomentView() {
         isVisible={isVisible}
         onImageLoad={handleImageLoad}
         onImageError={handleImageError}
+        savedMomentId={id}
+        onLocationUpdate={handleLocationUpdate}
       />
     </Container>
   );

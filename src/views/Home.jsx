@@ -106,6 +106,7 @@ function HomeView() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [momentData, setMomentData] = useState(null);
+  const [locationData, setLocationData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isContentVisible, setIsContentVisible] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -244,6 +245,7 @@ function HomeView() {
     flushSync(() => {
       setImagePreview(null);
       setMomentData(null);
+      setLocationData(null);
       setShowProcessing(false);
       setIsFadingOut(false);
       setIsContentVisible(false);
@@ -295,6 +297,7 @@ function HomeView() {
             dominantColor: data.dominantColor,
             textColor: data.textColor
           });
+          setLocationData(data.locationData);
           setIsLoading(false);
         });
 
@@ -311,6 +314,10 @@ function HomeView() {
       console.error("Error processing image:", error);
       setIsLoading(false);
     }
+  };
+
+  const handleLocationUpdate = (updatedLocationData) => {
+    setLocationData(updatedLocationData);
   };
 
   // Show validation message if key is not valid yet
@@ -347,7 +354,7 @@ function HomeView() {
       {imagePreview && momentData && (
         <MomentLayout
           exifData={momentData.exifData}
-          locationData={momentData.locationData}
+          locationData={locationData}
           weatherData={momentData.weatherData}
           dominantColor={momentData.dominantColor}
           textColor={momentData.textColor}
@@ -357,6 +364,7 @@ function HomeView() {
           onImageError={() => {}}
           isVisible={isContentVisible}
           savedMomentId={momentData.momentId}
+          onLocationUpdate={handleLocationUpdate}
         />
       )}
     </DropZone>

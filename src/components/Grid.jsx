@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { formatDate } from "../utils/formatDate";
 import LocationInfoCard from "./cards/Address";
@@ -124,6 +124,12 @@ function MomentLayout({
   savedMomentId
 }) {
   const [copyButtonText, setCopyButtonText] = useState("Copy Link");
+  const [currentLocationData, setCurrentLocationData] = useState(locationData);
+
+  // Update currentLocationData when locationData prop changes
+  useEffect(() => {
+    setCurrentLocationData(locationData);
+  }, [locationData]);
 
   const dateInfo = exifData?.DateTimeOriginal
     ? formatDate(exifData.DateTimeOriginal)
@@ -150,14 +156,20 @@ function MomentLayout({
     }
   };
 
+  const handleLocationUpdate = (updatedLocationData) => {
+    setCurrentLocationData(updatedLocationData);
+  };
+
   return (
     <ContentWrapper $isVisible={isVisible}>
       <LeftColumn>
         <LocationInfoCard
-          locationData={locationData}
+          locationData={currentLocationData}
           exifData={exifData}
           dominantColor={dominantColor}
           textColor={textColor}
+          momentId={savedMomentId}
+          onLocationUpdate={handleLocationUpdate}
         />
 
         <DateMapSection>
