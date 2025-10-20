@@ -22,10 +22,21 @@ const ErrorMessage = styled.p`
 
 const SLIDESHOW_INTERVAL = 5000; // 5 seconds per slide
 
+// Helper function to shuffle array
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 function SlideShowView() {
   const [momentIds, setMomentIds] = useState([]);
   const [moments, setMoments] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [shuffledIndices, setShuffledIndices] = useState([]);
+  const [currentPosition, setCurrentPosition] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
@@ -52,17 +63,27 @@ function SlideShowView() {
 
         setMomentIds(ids);
 
-        // Load first two moments
+        // Create shuffled indices array
+        const indices = ids.map((_, i) => i);
+        const shuffled = shuffleArray(indices);
+        setShuffledIndices(shuffled);
+
+        // Load first two moments using shuffled order
         const initialMoments = await Promise.all(
-          ids.slice(0, 2).map((id) =>
-            fetch(`${SERVER_URL}/moments/${id}`).then((res) => {
-              if (!res.ok) throw new Error(`Failed to load moment ${id}`);
+          shuffled.slice(0, 2).map((idx) =>
+            fetch(`${SERVER_URL}/moments/${ids[idx]}`).then((res) => {
+              if (!res.ok) throw new Error(`Failed to load moment ${ids[idx]}`);
               return res.json();
             })
           )
         );
 
-        setMoments(initialMoments);
+        // Store moments in their shuffled order
+        const momentsArray = new Array(ids.length);
+        shuffled.slice(0, 2).forEach((idx, i) => {
+          momentsArray[idx] = initialMoments[i];
+        });
+        setMoments(momentsArray);
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -73,12 +94,13 @@ function SlideShowView() {
     fetchInitialMoments();
   }, []);
 
-  // Load next moment when currentIndex changes
+  // Load next moment when currentPosition changes
   useEffect(() => {
     const loadNextMoment = async () => {
-      if (momentIds.length === 0) return;
+      if (momentIds.length === 0 || shuffledIndices.length === 0) return;
 
-      const nextIndex = (currentIndex + 1) % momentIds.length;
+      const nextPosition = (currentPosition + 1) % shuffledIndices.length;
+      const nextIndex = shuffledIndices[nextPosition];
 
       // Check if we already have the next moment loaded
       if (moments[nextIndex]) {
@@ -147,14 +169,14 @@ function SlideShowView() {
     };
 
     loadNextMoment();
-  }, [currentIndex, momentIds, moments]);
+  }, [currentPosition, momentIds, moments, shuffledIndices]);
 
-  // Reset states when currentIndex changes
+  // Reset states when currentPosition changes
   useEffect(() => {
     setImageLoaded(false);
     setIsVisible(false);
     hasShownRef.current = false;
-  }, [currentIndex]);
+  }, [currentPosition]);
 
   // Handle visibility - single source of truth
   useEffect(() => {
@@ -169,7 +191,12 @@ function SlideShowView() {
 
     // Otherwise, set a fallback timeout
     const fallbackTimer = setTimeout(() => {
-      if (!hasShownRef.current && moments[currentIndex] && !loading) {
+      if (
+        !hasShownRef.current &&
+        shuffledIndices.length > 0 &&
+        moments[shuffledIndices[currentPosition]] &&
+        !loading
+      ) {
         hasShownRef.current = true;
         setIsVisible(true);
       }
@@ -178,24 +205,49 @@ function SlideShowView() {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, [imageLoaded, loading, moments, currentIndex]);
+  }, [imageLoaded, loading, moments, currentPosition, shuffledIndices]);
 
   // Auto-advance slideshow
   useEffect(() => {
-    if (momentIds.length === 0) return;
+    if (momentIds.length === 0 || shuffledIndices.length === 0) return;
 
     const interval = setInterval(() => {
       // Fade out current moment
       setIsVisible(false);
 
-      // Wait for fade-out animation, then change index
+      // Wait for fade-out animation, then change position
       setTimeout(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % momentIds.length);
+        setCurrentPosition((prevPosition) => {
+          const nextPosition = prevPosition + 1;
+
+          // If we've reached the end, reshuffle
+          if (nextPosition >= shuffledIndices.length) {
+            const currentIndex = shuffledIndices[prevPosition];
+            let newShuffled = shuffleArray(momentIds.map((_, i) => i));
+
+            // Make sure the first image of the new shuffle isn't the same as the last image
+            // of the previous shuffle (avoid same image twice in a row)
+            if (momentIds.length > 1 && newShuffled[0] === currentIndex) {
+              // Swap the first element with any other element
+              const swapIndex =
+                Math.floor(Math.random() * (newShuffled.length - 1)) + 1;
+              [newShuffled[0], newShuffled[swapIndex]] = [
+                newShuffled[swapIndex],
+                newShuffled[0]
+              ];
+            }
+
+            setShuffledIndices(newShuffled);
+            return 0;
+          }
+
+          return nextPosition;
+        });
       }, 300); // Match the fade-out transition duration
     }, SLIDESHOW_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [momentIds.length]);
+  }, [momentIds, shuffledIndices]);
 
   const handleImageLoad = (e) => {
     setImageLoaded(true);
@@ -203,7 +255,13 @@ function SlideShowView() {
 
   const handleImageError = () => {
     // Skip to next image on error
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % momentIds.length);
+    setCurrentPosition((prevPosition) => {
+      const nextPosition = prevPosition + 1;
+      if (nextPosition >= shuffledIndices.length) {
+        return 0; // Loop back to start
+      }
+      return nextPosition;
+    });
   };
 
   // Check if image is already loaded (for cached images)
@@ -221,7 +279,7 @@ function SlideShowView() {
     const timer = setTimeout(checkImage, 50); // Check again after delay
 
     return () => clearTimeout(timer);
-  }, [currentIndex]);
+  }, [currentPosition]);
 
   if (error) {
     return (
@@ -231,10 +289,11 @@ function SlideShowView() {
     );
   }
 
-  if (loading || momentIds.length === 0) {
+  if (loading || momentIds.length === 0 || shuffledIndices.length === 0) {
     return <Container />;
   }
 
+  const currentIndex = shuffledIndices[currentPosition];
   const moment = moments[currentIndex];
 
   // If moment isn't loaded yet, show nothing
@@ -253,7 +312,7 @@ function SlideShowView() {
   return (
     <Container>
       <MomentLayout
-        key={`moment-${currentIndex}-${moment.id}`}
+        key={`moment-${currentPosition}-${moment.id}`}
         exifData={moment.exifData}
         locationData={moment.locationData}
         weatherData={moment.weatherData}
